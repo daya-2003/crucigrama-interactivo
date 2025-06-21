@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Crucigrama Interactivo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: linear-gradient(135deg, #f0f8ff, #e0f7fa);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #004d99;
+            color: white;
+            padding: 20px 10px;
+        }
+        header img {
+            height: 60px;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        header h1 {
+            display: inline;
+            font-size: 24px;
+        }
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        td {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #aaa;
+            text-align: center;
+            vertical-align: middle;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .empty {
+            background-color: #ccc;
+        }
+        .filled {
+            background-color: lightgreen;
+        }
+        .grid-container {
+            position: relative;
+            display: inline-block;
+            background-color: white;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+        .question-box {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #ffffffbb;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        button {
+            margin: 5px;
+            padding: 5px 10px;
+            font-size: 16px;
+            border: none;
+            background-color: #007acc;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #005c99;
+        }
+        .correct {
+            background-color: lightgreen;
+        }
+        .incorrect {
+            color: red;
+            font-weight: bold;
+        }
+        footer {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #004d99;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="escudo.png" alt="Escudo UTN">
+        <h1>Crucigrama Interactivo - Estática</h1>
+    </header>
+
+    <div class="main-container">
+        <div class="question-box">
+            <p id="pregunta">Cargando pregunta...</p>
+            <div id="opciones"></div>
+        </div>
+
+        <div id="crucigrama-container" class="grid-container"></div>
+
+        <p id="estado"></p>
+    </div>
+
+    <footer>
+        <p>Ciencias Experimentales | Didáctica de la Física</p>
+    </footer>
+
+    <script>
+        const filas = 20;
+        const columnas = 20;
+
+        const palabras = [
+            { palabra: "PESO", fila: 3, col: 9, direccion: "V", pista: "Es el resultado de la acción de la gravedad.", opciones: ["Peso", "Normal", "Apoyo"] },
+            { palabra: "APOYO", fila: 2, col: 14, direccion: "V", pista: "Es útil para analizar el equilibrio.", opciones: ["Apoyo", "Centro", "Momento"] },
+            { palabra: "MOMENTO", fila: 6, col: 15, direccion: "H_INV", pista: "Es una propiedad relacionada con la masa y la distancia al eje.", opciones: ["Centro", "Momento", "Fuerza"] },
+            { palabra: "ESTATICA", fila: 8, col: 16, direccion: "H_INV", pista: "Aparece entre dos superficies en reposo relativo.", opciones: ["Normal", "Friccion", "Estatica"] },
+            { palabra: "CENTRO", fila: 4, col: 6, direccion: "H_INV", pista: "Coincide con el centro de masa en cuerpos uniformes.", opciones: ["Centro", "Apoyo", "Peso"] },
+            { palabra: "NORMAL", fila: 8, col: 2, direccion: "H", pista: "Se opone al peso en una superficie de apoyo.", opciones: ["Peso", "Normal", "Estatica"] },
+            { palabra: "NEWTON", fila: 12, col: 3, direccion: "V_INV", pista: "Equivale a kg·m/s².", opciones: ["Fuerza", "Newton", "Masa"] },
+            { palabra: "PALANCA", fila: 9, col: 6, direccion: "V_INV", pista: "Influye en el valor del momento.", opciones: ["Palanca", "Centro", "Normal"] },
+            { palabra: "EQUILIBRIO", fila: 11, col: 3, direccion: "H", pista: "Estado en el que la suma de fuerzas y momentos es cero.", opciones: ["Centro", "Estatica", "Equilibrio"] },
+            { palabra: "FRICCION", fila: 13, col: 11, direccion: "V_INV", pista: "Fuerza de contacto paralela a la superficie.", opciones: ["Friccion", "Normal", "Peso"] }
+        ];
+
+        let actual = 0;
+        const grid = Array.from({ length: filas }, () => Array(columnas).fill(""));
+
+        function colocarPalabra({ palabra, fila, col, direccion }, index) {
+            for (let i = 0; i < palabra.length; i++) {
+                let f = fila, c = col;
+                if (direccion === "H") c += i;
+                else if (direccion === "H_INV") c -= i;
+                else if (direccion === "V") f += i;
+                else if (direccion === "V_INV") f -= i;
+                grid[f][c] = { letra: palabra[i], palabraIndex: index };
+            }
+        }
+
+        palabras.forEach((p, i) => colocarPalabra(p, i));
+
+        function dibujarCrucigrama() {
+            const container = document.getElementById("crucigrama-container");
+            const table = document.createElement("table");
+            for (let f = 0; f < filas; f++) {
+                const row = document.createElement("tr");
+                for (let c = 0; c < columnas; c++) {
+                    const cell = document.createElement("td");
+                    const contenido = grid[f][c];
+                    if (contenido === "") {
+                        cell.classList.add("empty");
+                    } else {
+                        cell.dataset.fila = f;
+                        cell.dataset.columna = c;
+                        cell.classList.add("casilla");
+                        cell.textContent = "";
+                    }
+                    row.appendChild(cell);
+                }
+                table.appendChild(row);
+            }
+            container.innerHTML = "";
+            container.appendChild(table);
+        }
+
+        function mostrarPregunta() {
+            if (actual >= palabras.length) {
+                document.getElementById("estado").innerHTML = "<strong>¡Crucigrama completado!</strong>";
+                return;
+            }
+
+            const palabraActual = palabras[actual];
+            document.getElementById("pregunta").textContent = `Pista: ${palabraActual.pista}`;
+            const opcionesContainer = document.getElementById("opciones");
+            opcionesContainer.innerHTML = "";
+            palabraActual.opciones.forEach(op => {
+                const boton = document.createElement("button");
+                boton.textContent = op;
+                boton.onclick = () => validarRespuesta(op);
+                opcionesContainer.appendChild(boton);
+            });
+        }
+
+        function validarRespuesta(seleccion) {
+            const correcta = palabras[actual].palabra.toUpperCase();
+            if (seleccion.toUpperCase() === correcta) {
+                rellenarPalabra(palabras[actual]);
+                actual++;
+                mostrarPregunta();
+            } else {
+                document.getElementById("estado").innerHTML = "<span class='incorrect'>Respuesta incorrecta. Intenta de nuevo.</span>";
+            }
+        }
+
+        function rellenarPalabra({ palabra, fila, col, direccion }) {
+            for (let i = 0; i < palabra.length; i++) {
+                let f = fila, c = col;
+                if (direccion === "H") c += i;
+                else if (direccion === "H_INV") c -= i;
+                else if (direccion === "V") f += i;
+                else if (direccion === "V_INV") f -= i;
+
+                const cell = document.querySelector(`td[data-fila='${f}'][data-columna='${c}']`);
+                if (cell) {
+                    cell.textContent = palabra[i];
+                    cell.classList.add("filled");
+                }
+            }
+            document.getElementById("estado").innerHTML = "";
+        }
+
+        dibujarCrucigrama();
+        mostrarPregunta();
+    </script>
+</body>
+</html>
